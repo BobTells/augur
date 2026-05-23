@@ -9,9 +9,9 @@ Both artifacts together are the contract. You see the rules and the evidence. Cl
 
 ## Thesis
 
-You are not having a conversation with the model. You're using English to instruct math, and the personality vector is one of the inputs. Augur makes that input explicit instead of hoping the model guesses.
+You are not having a conversation with your AI, you're working a math problem in English. The personality vector is one of the inputs. Augur makes that input explicit instead of hoping the model guesses.
 
-Long-form write-up: [Human API on rebootpilot.com](https://rebootpilot.com).
+Long-form write-up: [Human API on rebootpilot.com](https://rebootpilot.com/items/augur.html).
 
 ## Install
 
@@ -41,7 +41,7 @@ Full ruleset in [SKILL.md](SKILL.md).
 
 ## Companion skills
 
-- [grill-me](https://github.com/bobtells/grill-me) — the skill that pulls you into clear thinking when your own idea is still fuzzy. Use before augur if you want to sharpen your own input first.
+- [grill-me](https://github.com/mattpocock/skills) — by Matt Pocock. The skill that pulls you into clear thinking when your own idea is still fuzzy. Use before augur if you want to sharpen your own input first.
 
 ## Status
 
