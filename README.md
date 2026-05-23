@@ -11,7 +11,7 @@ Both artifacts together are the contract. You see the rules and the evidence. Cl
 
 You are not having a conversation with your AI, you're working a math problem in English. The personality vector is one of the inputs. Augur makes that input explicit instead of hoping the model guesses.
 
-Long-form write-up: [Human API on rebootpilot.com](https://rebootpilot.com/items/augur.html).
+Long-form write-up: [Human API on rebootpilot.com](https://www.rebootpilot.com/items/augur.html).
 
 ## Install
 
