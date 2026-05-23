@@ -1,5 +1,6 @@
 ---
 name: augur
+version: 0.1
 description: Tune Claude to a user's personality by reading a credible report (or interviewing as fallback), then emitting two artifacts — a terse behavior preamble that drops into the user's existing Claude setup, and a human-readable personality artifact that shows the work. Use when the user invokes /augur, pastes Big Five / DISC / 360 / personality assessment results, asks to personalize or tune Claude to their style, or references "human API" / personality calibration.
 ---
 

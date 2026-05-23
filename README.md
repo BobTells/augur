@@ -45,7 +45,7 @@ Full ruleset in [SKILL.md](SKILL.md).
 
 ## Status
 
-Rough but working. The thesis is: personality is a real input to the math, and a written contract is one way to set it. Whether *this* shape of contract is the right shape — open question. PRs and pushback both welcome.
+Working, and in active refinement. The thesis — personality is a real input to the math, and a written contract is one way to set it — is the part I'm sure about. Whether *this* shape of contract is the right shape is open. PRs and pushback both welcome.
 
 ## License
 
