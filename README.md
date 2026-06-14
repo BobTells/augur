@@ -1,3 +1,6 @@
+> [!WARNING]
+> **Early prototype.** A personal experiment, shared rough — expect sharp edges and breaking changes.
+
 # augur
 
 A Claude Code skill that tunes the LLM to a user's personality. You hand it evidence — a Big Five report, DISC results, a "user manual for me," a bio — or it interviews you as fallback. It reads the input critically, weights it by credibility, and emits two artifacts:
