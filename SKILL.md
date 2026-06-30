@@ -1,6 +1,6 @@
 ---
 name: augur
-version: 0.2
+version: 0.3
 description: Tune Claude to a user's personality by reading a credible report (or interviewing as fallback), then emitting one lean personality file that loads into the user's Claude setup every session — a one-line headline, directive "how to work with me" rules, and the blind spots to watch for. Use when the user invokes /augur, pastes Big Five / DISC / 360 / personality assessment results, asks to personalize or tune Claude to their style, or references "human API" / personality calibration.
 ---
 
@@ -10,7 +10,7 @@ A skill that tunes the LLM to a user's personality. The user supplies evidence (
 
 **`personality.md`** — a lean file built to *load into context every session*, not to file as a report. It is the thing that tunes Claude. Shape: a one-line headline, **how to work with the user** (directive rules Claude can act on), and **what to watch for on their behalf** (predicted blind spots). It is referenced from the user's durable setup (e.g. an `@`-import in CLAUDE.md) so it loads on every run.
 
-The critical reading — claimed vs observed, credibility tiering, reconciliation — still happens (Steps 3–4). It just doesn't get written into the file. Provenance is how the rules were derived, not an instruction Claude needs every turn; baking it into a load-every-session file only costs context. The file carries the *conclusions*; where observed behavior conflicts with a self-reported score, the file states the observed rule.
+The critical reading — claimed vs observed, credibility tiering — still happens (Steps 3–4); it just doesn't get written into the file. The file carries *conclusions*, not **provenance** (Rule 3).
 
 The file is the contract: the user reads the rules and signs off; Claude reads the rules and honors them.
 
@@ -28,18 +28,16 @@ You are not having a conversation with the model. You're using English words to 
 
 ## Hard rules (these are the skill's POV)
 
-These are non-negotiable. They are why this skill is opinionated, not generic.
-
 1. **No flattery.** Do not tell the user they are smart, insightful, thoughtful, or anything similar. Do not validate the quality of their input unprompted. The LLM's default is to flatter; the skill must override that default.
 2. **Self-report is suspect.** Assessments are biased by social desirability, mood, self-image. Read every input critically. Cross-reference with available behavioral signal (recent messages, visible writing style, memory entries, code style if present).
 3. **Distinguish claimed from observed — then ship only the conclusion.** Do the work of separating what the user claimed from what you can actually observe (Step 4). Where they conflict, **observed wins** — write the rule the behavior supports, not the one the score claims. Do this analysis for yourself; do **not** write the seams, the claimed-vs-observed table, or per-rule citations into `personality.md`. That's provenance, not instruction — it bloats a file meant to load every turn.
 4. **Credibility is graded.** Not all input is equal. Tier the input (see below). Low-tier input is noted for your own read but does not drive the rules.
 5. **Adapt to the user's setup.** Do not force a particular file layout. Discover what the user already has (CLAUDE.md, memory dir, existing personality docs) and integrate. A thin setup is fine.
-6. **Confirm before writing.** Show the user the full `personality.md` (it's ~25–30 lines — short enough to read inline) before placing it. The file is a contract — the user must sign off.
+6. **Confirm before writing.** Nothing lands — neither `personality.md` nor any CLAUDE.md edit — without explicit sign-off at Step 7. The file is a contract.
 7. **Use the vector both ways.** The personality vector predicts how the user wants to be talked to *and* where they're likely to underweight a concern. The skill must surface both. A low score is a tell, not a compliment — call out the blind spot it predicts and write a rule that helps compensate.
 8. **Ask the user how they want to do this. Then do it that way.** The whole skill is itself a personality-matching exercise. Don't guess pacing, depth, autonomy, or output format. Ask up front (Step 0). The user might want a one-shot dump, a walk-through, an interview-heavy slow build, or anything in between. Whatever they say goes. This rule applies to the entire skill, not just the interview fallback. The sauce of this skill is getting the user comfortable enough that the input you collect is accurate — guessing how to work with them defeats the point.
 9. **Use the AskUserQuestion UI for every decision point.** Every gate in this skill (pacing in Step 0, input source in Step 2, interview-on-top in Step 6, sign-off in Step 7) is a `AskUserQuestion` call with 2–4 sharp options and a `(Recommended)` first. One question per turn. No free-text "so, what do you think?" prompts where a structured pick would do. The user signed up for a tuning exercise, not an essay reply. If a question can't be reduced to 2–4 options, it probably shouldn't be asked yet — narrow it first.
-10. **Show the file inline at sign-off — it's short now.** `personality.md` is ~25–30 lines and it *is* what tunes Claude, so the user must see it in full before approving. At sign-off (Step 7), write it to a draft path first (so they have a real file to open and edit), then show the full file inline plus the proposed paths, and use `AskUserQuestion` for approval. (This reverses the old skill's "never paste the artifact" rule — that rule existed because the old artifact was a long report. The lean file is meant to be read in one glance.) Do not, however, dump long *report-style* content inline — if you ever catch the file growing past ~30 lines, that's the failure mode: cut it back to conclusions.
+10. **Show the file in full at sign-off.** `personality.md` is ~25–30 lines and it *is* what tunes Claude, so the user reads the whole thing before approving. At Step 7: write it to a draft path first (a real file to open and edit), then show the full file inline plus the proposed paths, and use `AskUserQuestion` for approval.
 
 ## Process
 
@@ -63,11 +61,9 @@ options:
       desc: "I sketch what I'm about to do, ask a few targeted things, then ship the draft. Middle ground."
 ```
 
-**Why these labels are concrete, not jargon:** first-time users don't know what "walk-through" or "interview-heavy" means in this skill. The option text must describe *what happens to them* in plain English. Don't drift back to insider names.
+Keep option text concrete — describe *what happens to the user* in plain English, not insider names like "walk-through" or "interview-heavy."
 
-Honor whatever they pick. If they pick one-shot, run Steps 1–7 in a single pass. If they pick walk-through, every step is its own turn. If they pick interview-heavy, go to Step 6 even with a report in hand.
-
-This step exists because the skill is itself an exercise in matching the user's style. Guessing here makes the rest of the input less trustworthy — a user who got steamrolled at Step 0 will give shorter, less honest answers downstream.
+Honor whatever they pick. One-shot → run Steps 1–7 in a single pass. Walk-through → every step is its own turn. Interview-heavy → go to Step 6 even with a report in hand.
 
 ### Step 1 — Discover the user's existing setup
 
@@ -78,11 +74,13 @@ Before asking for input, look at what they already have:
 - Any existing personality doc (search for `personality.md`, `user-manual.md`, `about-me.md`, etc.)
 - Project CLAUDE.md files in the working directory?
 
-**Also check for prior Augur output — this skill may have run before.** Look for:
-- An `<!-- AUGUR START -->` … `<!-- AUGUR END -->` block in CLAUDE.md. Older versions wrote a *terse inline preamble* between these markers; this version writes a single `@`-import line instead (see Step 7). If you find an inline preamble there, this is a **migration**.
-- An existing `personality.md` in the old report format (claimed/observed/reconciliation table, citations, caveats). This version replaces it with the lean load-every-session format.
+**Also check for prior Augur output — this skill may have run before.** Look for an `<!-- AUGUR START -->` … `<!-- AUGUR END -->` block in CLAUDE.md and any existing `personality.md`. That puts the run in one of three states — name which one to the user:
 
-If you find either, say so plainly and treat the run as a migration: you'll regenerate the lean `personality.md` and convert the CLAUDE.md block to an `@`-import (Step 7 covers the mechanics). Don't silently overwrite — flag it and fold the user's sign-off in at Step 7.
+- **Fresh** — no markers, no file. Default path.
+- **Re-run** — markers already hold an `@`-import line and `personality.md` is in the current lean format. You're refreshing, not migrating: regenerate the file from the new input, overwrite in place at sign-off; the marker block is already correct, so leave it. Don't append a second import or a second marker block.
+- **Migration** — markers hold a *terse inline preamble* (old format) or `personality.md` is an old report (claimed/observed table, citations, caveats). Convert the block to an `@`-import and overwrite the report with the lean file (Step 7).
+
+In every prior-output case, don't silently overwrite — flag the state and fold sign-off in at Step 7.
 
 Report what you found in one or two sentences. This is where the file will eventually integrate.
 
@@ -116,8 +114,8 @@ Tier the input by credibility:
 | Tier | Examples | How to weight |
 |---|---|---|
 | **High** | Big Five aspect-level (Understand Myself, IPIP-NEO), DISC with full profile, 360-degree feedback, validated work-style assessments | Drives the rules. Trust the structure; still distinguish claimed vs observed. |
-| **Medium** | Self-written "user manual for me," professional bio, LinkedIn About, blog post about working style | Useful signal. Note in artifact, but cross-reference heavily with observed behavior. |
-| **Low** | Astrology, BuzzFeed quizzes, fictional archetype (Hogwarts house, D&D alignment, Star Wars character), MBTI four-letter type with no other context | Record in artifact as user-identified-as. Do not derive behavior rules from it. Lean on observation + interview instead. |
+| **Medium** | Self-written "user manual for me," professional bio, LinkedIn About, blog post about working style | Useful signal, but cross-reference heavily with observed behavior. |
+| **Low** | Astrology, BuzzFeed quizzes, fictional archetype (Hogwarts house, D&D alignment, Star Wars character), MBTI four-letter type with no other context | Do not derive rules from it. Lean on observation + interview instead; if the user wants it acknowledged, do so in chat, not the file. |
 
 Know the tier — it governs how hard the input drives the rules. It does **not** get written into `personality.md` (that's provenance); if the user asks how you weighted things, tell them in chat.
 
@@ -130,7 +128,7 @@ Read the input and ask yourself:
 - Where do claimed and observed agree? Where do they diverge?
 - Which claims are unsupported by anything you can see?
 
-Do not skip this step. The skeptical lens is the skill.
+Done when **every claim is tagged** agree / diverge / unsupported, and every divergence has a resolution (observed wins) ready to become a rule in Step 5. The skeptical lens is the skill — an untagged claim means the step isn't finished.
 
 ### Step 5 — Synthesize `personality.md`
 
@@ -250,11 +248,12 @@ options:
 <!-- AUGUR END -->
 ```
 
-Integrate based on the setup found in Step 1:
-- **Has global CLAUDE.md** → write the marker block with the `@`-import line (path adjusted to wherever the file actually landed). Subsequent /augur runs overwrite between the markers, leaving the rest of CLAUDE.md untouched.
-- **Migration — found an old inline preamble between the markers** → *replace* that inline block with the `@`-import line, and overwrite the old report-format `personality.md` with the lean one. Tell the user the format changed: the rules now live in `personality.md` and CLAUDE.md just imports it. Don't leave both an inline preamble and an imported file — that double-loads the rules.
+Integrate based on the Step 1 state:
+- **Fresh, has global CLAUDE.md** → write the marker block with the `@`-import line (path adjusted to wherever the file landed).
+- **Re-run** → overwrite `personality.md` in place; the marker block already holds the right import, so leave it untouched. One file changes, nothing else.
+- **Migration** → *replace* the old inline preamble between the markers with the `@`-import line, and overwrite the old report-format `personality.md` with the lean one. Tell the user the format changed: rules now live in `personality.md`, CLAUDE.md just imports it. Never leave both an inline preamble and an import — that double-loads the rules.
 - **Has memory system** → write a reference memory pointing at the file's path so future sessions can find it.
-- **Has neither CLAUDE.md** → suggest creating `~/.claude/CLAUDE.md` with the marker block + import as the seed. If they decline, leave `personality.md` on disk and tell them it won't auto-load until something imports it.
+- **No CLAUDE.md** → suggest creating `~/.claude/CLAUDE.md` with the marker block + import as the seed. If they decline, leave `personality.md` on disk and tell them it won't auto-load until something imports it.
 
 After writing, confirm in ≤3 lines what landed where.
 
