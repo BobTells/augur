@@ -1,17 +1,18 @@
 ---
 name: augur
-version: 0.1
-description: Tune Claude to a user's personality by reading a credible report (or interviewing as fallback), then emitting two artifacts — a terse behavior preamble that drops into the user's existing Claude setup, and a human-readable personality artifact that shows the work. Use when the user invokes /augur, pastes Big Five / DISC / 360 / personality assessment results, asks to personalize or tune Claude to their style, or references "human API" / personality calibration.
+version: 0.2
+description: Tune Claude to a user's personality by reading a credible report (or interviewing as fallback), then emitting one lean personality file that loads into the user's Claude setup every session — a one-line headline, directive "how to work with me" rules, and the blind spots to watch for. Use when the user invokes /augur, pastes Big Five / DISC / 360 / personality assessment results, asks to personalize or tune Claude to their style, or references "human API" / personality calibration.
 ---
 
 # Augur
 
-A skill that tunes the LLM to a user's personality. The user supplies evidence (an assessment report, a "user manual for me," a bio) or — as fallback — agrees to an interview. The skill reads that input critically, weights it by credibility, and emits two artifacts:
+A skill that tunes the LLM to a user's personality. The user supplies evidence (an assessment report, a "user manual for me," a bio) or — as fallback — agrees to an interview. The skill reads that input critically, weights it by credibility, and emits **one artifact**:
 
-1. **Behavior preamble** — terse rules that drop into the user's existing Claude setup (global CLAUDE.md or wherever they keep durable instructions). This is what tunes Claude. Includes both **how to work with the user** and **what to watch for on their behalf** (predicted blind spots).
-2. **Personality artifact** — human-readable doc that shows the work: what was claimed, what was observed, why the preamble says what it says. This is what makes the preamble defensible and what the user can share, edit, screenshot, or audit.
+**`personality.md`** — a lean file built to *load into context every session*, not to file as a report. It is the thing that tunes Claude. Shape: a one-line headline, **how to work with the user** (directive rules Claude can act on), and **what to watch for on their behalf** (predicted blind spots). It is referenced from the user's durable setup (e.g. an `@`-import in CLAUDE.md) so it loads on every run.
 
-Both artifacts together are the contract: the user sees the rules and the evidence; Claude reads the rules and honors them.
+The critical reading — claimed vs observed, credibility tiering, reconciliation — still happens (Steps 3–4). It just doesn't get written into the file. Provenance is how the rules were derived, not an instruction Claude needs every turn; baking it into a load-every-session file only costs context. The file carries the *conclusions*; where observed behavior conflicts with a self-reported score, the file states the observed rule.
+
+The file is the contract: the user reads the rules and signs off; Claude reads the rules and honors them.
 
 ## Thesis
 
@@ -31,14 +32,14 @@ These are non-negotiable. They are why this skill is opinionated, not generic.
 
 1. **No flattery.** Do not tell the user they are smart, insightful, thoughtful, or anything similar. Do not validate the quality of their input unprompted. The LLM's default is to flatter; the skill must override that default.
 2. **Self-report is suspect.** Assessments are biased by social desirability, mood, self-image. Read every input critically. Cross-reference with available behavioral signal (recent messages, visible writing style, memory entries, code style if present).
-3. **Distinguish claimed from observed.** In the artifact, mark traits as `claimed`, `observed`, or `both`. The reader should be able to see the seams.
-4. **Credibility is graded.** Not all input is equal. Tier the input (see below). Low-tier input is recorded for color but does not drive the preamble.
+3. **Distinguish claimed from observed — then ship only the conclusion.** Do the work of separating what the user claimed from what you can actually observe (Step 4). Where they conflict, **observed wins** — write the rule the behavior supports, not the one the score claims. Do this analysis for yourself; do **not** write the seams, the claimed-vs-observed table, or per-rule citations into `personality.md`. That's provenance, not instruction — it bloats a file meant to load every turn.
+4. **Credibility is graded.** Not all input is equal. Tier the input (see below). Low-tier input is noted for your own read but does not drive the rules.
 5. **Adapt to the user's setup.** Do not force a particular file layout. Discover what the user already has (CLAUDE.md, memory dir, existing personality docs) and integrate. A thin setup is fine.
-6. **Confirm before writing.** Show the user the preamble and the artifact before placing them. The artifact is a contract — the user must sign off.
+6. **Confirm before writing.** Show the user the full `personality.md` (it's ~25–30 lines — short enough to read inline) before placing it. The file is a contract — the user must sign off.
 7. **Use the vector both ways.** The personality vector predicts how the user wants to be talked to *and* where they're likely to underweight a concern. The skill must surface both. A low score is a tell, not a compliment — call out the blind spot it predicts and write a rule that helps compensate.
 8. **Ask the user how they want to do this. Then do it that way.** The whole skill is itself a personality-matching exercise. Don't guess pacing, depth, autonomy, or output format. Ask up front (Step 0). The user might want a one-shot dump, a walk-through, an interview-heavy slow build, or anything in between. Whatever they say goes. This rule applies to the entire skill, not just the interview fallback. The sauce of this skill is getting the user comfortable enough that the input you collect is accurate — guessing how to work with them defeats the point.
 9. **Use the AskUserQuestion UI for every decision point.** Every gate in this skill (pacing in Step 0, input source in Step 2, interview-on-top in Step 6, sign-off in Step 7) is a `AskUserQuestion` call with 2–4 sharp options and a `(Recommended)` first. One question per turn. No free-text "so, what do you think?" prompts where a structured pick would do. The user signed up for a tuning exercise, not an essay reply. If a question can't be reduced to 2–4 options, it probably shouldn't be asked yet — narrow it first.
-10. **Never paste the full personality artifact into chat.** The artifact is a document. Documents are read in editors. At sign-off (Step 7), write it to a draft path first, show *only the paths + the short preamble*, and use `AskUserQuestion` for the approval decision. Pasting the whole artifact inline floods the conversation, makes it un-editable in place, and turns the user's review into scrolling instead of reading. This is the single most common failure mode for this skill — guard against it.
+10. **Show the file inline at sign-off — it's short now.** `personality.md` is ~25–30 lines and it *is* what tunes Claude, so the user must see it in full before approving. At sign-off (Step 7), write it to a draft path first (so they have a real file to open and edit), then show the full file inline plus the proposed paths, and use `AskUserQuestion` for approval. (This reverses the old skill's "never paste the artifact" rule — that rule existed because the old artifact was a long report. The lean file is meant to be read in one glance.) Do not, however, dump long *report-style* content inline — if you ever catch the file growing past ~30 lines, that's the failure mode: cut it back to conclusions.
 
 ## Process
 
@@ -55,7 +56,7 @@ options:
   - "Show me each step, I'll approve as we go (Recommended)"
       desc: "I ask you something, you pick, we move. Best for first-time runs. No surprises."
   - "Ask me a bunch of questions first, then write"
-      desc: "I run a grill-me interview to learn you better, THEN produce the artifacts. Use if you want a deeper read."
+      desc: "I run a grill-me interview to learn you better, THEN produce personality.md. Use if you want a deeper read."
   - "Just produce it, I'll review at the end"
       desc: "Fastest. I make the calls based on what you give me and present results for approval. Use if you've done this before."
   - "Brief plan, 2-3 quick questions, then write"
@@ -77,7 +78,13 @@ Before asking for input, look at what they already have:
 - Any existing personality doc (search for `personality.md`, `user-manual.md`, `about-me.md`, etc.)
 - Project CLAUDE.md files in the working directory?
 
-Report what you found in one or two sentences. This is where the artifacts will eventually integrate.
+**Also check for prior Augur output — this skill may have run before.** Look for:
+- An `<!-- AUGUR START -->` … `<!-- AUGUR END -->` block in CLAUDE.md. Older versions wrote a *terse inline preamble* between these markers; this version writes a single `@`-import line instead (see Step 7). If you find an inline preamble there, this is a **migration**.
+- An existing `personality.md` in the old report format (claimed/observed/reconciliation table, citations, caveats). This version replaces it with the lean load-every-session format.
+
+If you find either, say so plainly and treat the run as a migration: you'll regenerate the lean `personality.md` and convert the CLAUDE.md block to an `@`-import (Step 7 covers the mechanics). Don't silently overwrite — flag it and fold the user's sign-off in at Step 7.
+
+Report what you found in one or two sentences. This is where the file will eventually integrate.
 
 ### Step 2 — Ask for input (gate before interview)
 
@@ -88,7 +95,7 @@ question: "What do you have for me to read?"
 header:   "Input"
 options:
   - "I'll paste a personality report (Recommended)"
-      desc: "Big Five aspect-level (Understand Myself, IPIP-NEO), DISC, 360. High-tier input — drives the preamble."
+      desc: "Big Five aspect-level (Understand Myself, IPIP-NEO), DISC, 360. High-tier input — drives the rules."
   - "I'll give you a file path to a report or 'user manual for me' doc"
       desc: "I'll read it from disk. Medium or High tier depending on source."
   - "I have nothing — interview me instead"
@@ -108,11 +115,11 @@ Tier the input by credibility:
 
 | Tier | Examples | How to weight |
 |---|---|---|
-| **High** | Big Five aspect-level (Understand Myself, IPIP-NEO), DISC with full profile, 360-degree feedback, validated work-style assessments | Drives the preamble. Trust the structure; still distinguish claimed vs observed. |
+| **High** | Big Five aspect-level (Understand Myself, IPIP-NEO), DISC with full profile, 360-degree feedback, validated work-style assessments | Drives the rules. Trust the structure; still distinguish claimed vs observed. |
 | **Medium** | Self-written "user manual for me," professional bio, LinkedIn About, blog post about working style | Useful signal. Note in artifact, but cross-reference heavily with observed behavior. |
 | **Low** | Astrology, BuzzFeed quizzes, fictional archetype (Hogwarts house, D&D alignment, Star Wars character), MBTI four-letter type with no other context | Record in artifact as user-identified-as. Do not derive behavior rules from it. Lean on observation + interview instead. |
 
-State the tier explicitly in the artifact. Do not hide it.
+Know the tier — it governs how hard the input drives the rules. It does **not** get written into `personality.md` (that's provenance); if the user asks how you weighted things, tell them in chat.
 
 ### Step 4 — Evaluate critically
 
@@ -125,65 +132,42 @@ Read the input and ask yourself:
 
 Do not skip this step. The skeptical lens is the skill.
 
-### Step 5 — Synthesize the two artifacts
+### Step 5 — Synthesize `personality.md`
 
-#### A. Personality artifact (human-readable, defensible)
+One artifact. Built to **load into context every session**, not to file as a report. Cap it at **~25–30 lines** so it's cheap to load every turn. If it grows past that, you're writing a report — cut back to conclusions.
 
-File: ask the user where it goes. Default suggestion: `~/.claude/augur/personality.md` or under their existing project structure.
+Do the critical analysis (Step 4) in your head: claimed vs observed, where they diverge, which claims nothing supports. Then throw the scaffolding away and write only the rules. Where a self-reported score and observed behavior conflict, write the **observed** rule.
 
-Structure:
+Structure — three parts, nothing else:
 
 ```markdown
-# <user> — Personality artifact
+# <user> — how to work with me
 
-**Source:** <name of report / interview transcript>
-**Tier:** <high | medium | low>
-**Captured:** <date>
+<one-line headline. The single most important thing about working with this user. Not a paragraph.>
 
-## Headline
+## How to work with me
+- <directive rule Claude can act on. Imperative voice. "Be blunt," not "User is low on agreeableness.">
+- <one rule per line. Behavior, not trait description.>
+- <...>
 
-<short summary — one paragraph at most>
-
-## What was claimed
-
-<bulleted list of behavioral claims from the input, with source>
-
-## What was observed
-
-<bulleted list of behaviors observed in available signal, with where>
-
-## Reconciliation
-
-<table or list: claim | observed | both | unclear>
-
-## Behavioral implications — how to work with this user
-
-<one rule per implication. Each rule cites the trait/score/observation it came from. Populates the "How to work with me" section of the preamble.>
-
-## Predicted blind spots — what to watch for on their behalf
-
-<one rule per likely gap. Each rule cites the score/observation. The user is competent enough to know these exist; the skill names them so Claude can compensate without being asked. Populates the "Watch for me" section of the preamble.>
-
-Example pattern:
-- "Low aesthetics → push back on visual decisions, suggest alternatives. User won't naturally reach for them."
-- "Low compassion → flag when external comms need a softer register. User won't see it."
-- "Low orderliness → offer structure when ambiguity is starting to cost. Don't demand it; surface it."
-
-## Caveats
-
-<self-report bias, sample size, anything else>
+## Watch for me
+- <a failure mode to catch on the user's behalf — a blind spot the personality predicts.>
+- <imperative: what Claude should DO when it sees the gap, not just naming the gap.>
+- <...>
 ```
 
-This is the doc the user can read, edit, and share. It is the contract.
+Rules for the content:
 
-#### B. Behavior preamble (terse, what Claude reads)
+- **Directive, not descriptive.** Every line is something Claude does or watches for. No trait labels, no percentile scores, no "observed in session 3" footnotes, no self-report caveats. Those are provenance — they don't belong in a load-every-turn file.
+- **"How to work with me"** = how the user wants to be talked to and worked with. Pacing, bluntness, depth, autonomy, format.
+- **"Watch for me"** = where the user is likely to underweight a concern, written as an action. A low score is a tell, not a compliment — name the blind spot *and* what to do about it.
 
-A short block — aim for under 20 lines. Bulleted rules only. No explanation, no source citations — those live in the artifact.
-
-Example (drawn from the artifact's "Behavioral implications" section):
+Example shape (this is the whole file, ~20 lines):
 
 ```markdown
-# Personality preamble
+# Bob — how to work with me
+
+Blunt, fast, ship-biased. Lead with the answer; earn every word after it.
 
 ## How to work with me
 - Be blunt. No "great question," no softening preamble.
@@ -192,15 +176,15 @@ Example (drawn from the artifact's "Behavioral implications" section):
 - No flowery prose. Function over form.
 - Tolerate disorder. Don't demand structure that isn't there.
 - Drive to completion. Bias to shipping.
-- Don't add caveats the user wouldn't add themselves.
+- Don't add caveats I wouldn't add myself.
 
-## Watch for me (blind spots)
+## Watch for me
 - Visual / UI decisions — push back, suggest alternatives I won't reach for.
 - External-facing copy — flag when a softer register would land better with the audience.
 - Long-running ambiguity — surface structure if it's starting to cost; don't demand it.
 ```
 
-This is what tunes Claude. Strangers reading the preamble should understand it cold.
+This is what tunes Claude, and it's also the human-readable thing. Strangers reading it should understand it cold.
 
 ### Step 6 — Interview (fallback, or supplement)
 
@@ -219,7 +203,7 @@ options:
   - "Yes — run grill-me, 5 questions (Recommended)"
       desc: "Five targeted AskUserQuestion grills. Each has 2–4 sharp options with a recommended pick."
   - "Yes — run grill-me, but longer (10+ questions)"
-      desc: "Deeper coverage. Use if you want the artifact to be exhaustive."
+      desc: "Deeper coverage. Use if you want a more thorough read before I write."
   - "Lighter — 2–3 questions, no full grill"
       desc: "Just the highest-leverage gaps from what I already know."
   - "Skip — go straight to synthesis with what we have"
@@ -232,37 +216,47 @@ Do not impose a fixed question set. **Each question should narrow based on the p
 
 After the interview, treat the transcript as Medium-tier input and run Steps 3–5.
 
-### Step 7 — Place the artifacts (with confirmation)
+### Step 7 — Place the file (with confirmation)
 
-**Hard rule, restating Rule 10: do not paste the full personality artifact into chat.** The artifact is a document — it lives in a file, the user opens it in their editor. Pasting it inline is the failure mode this skill exists to prevent.
+The file is short and it's what tunes Claude, so the user sees it in full before it's placed (Rule 10).
 
 Order of operations:
 
-1. **Write the artifact to a draft path first** — e.g. `~/.claude/augur/personality.draft.md`. This gives the user a real file to open and edit *while* you're still asking for sign-off.
-2. **Show inline only**: (a) the two file paths you propose to use, (b) the preamble in full (it's ≤20 lines and it's what actively changes Claude's behavior, so the user needs to see it before approving), (c) a one-sentence summary of the artifact (not the artifact itself).
+1. **Write `personality.md` to a draft path first** — e.g. `~/.claude/augur/personality.draft.md`. This gives the user a real file to open and edit *while* you're asking for sign-off.
+2. **Show inline**: (a) the full file (~25–30 lines), (b) the path you propose for it, (c) the exact `@`-import line you'll add to CLAUDE.md.
 3. **Use `AskUserQuestion` for the sign-off:**
 
 ```
-question: "Approve and place the artifacts?"
+question: "Approve and place personality.md?"
 header:   "Sign-off"
 options:
-  - "Approve — place both, update memory (Recommended)"
-      desc: "Renames the draft to personality.md, appends preamble between <!-- AUGUR START --> markers in CLAUDE.md, writes reference memory."
-  - "Approve preamble only — I'll edit the artifact myself first"
-      desc: "Places the preamble. Leaves personality.draft.md for you to edit; you can rename when ready."
+  - "Approve — place it and wire the import (Recommended)"
+      desc: "Renames the draft to personality.md and adds the @-import line to CLAUDE.md so it loads every session."
+  - "Place the file, but don't touch CLAUDE.md"
+      desc: "Writes personality.md. You wire the import yourself later. Use if your setup is non-standard."
   - "Hold — I want to edit the draft first, then re-run sign-off"
-      desc: "Nothing is placed yet. Draft stays at personality.draft.md. Ping me when ready."
+      desc: "Nothing is placed. Draft stays at personality.draft.md. Ping me when ready."
   - "Reject — start over"
       desc: "Discard the draft. Restart from Step 0 or wherever you want."
 ```
 
-Then integrate based on the setup you found in Step 1:
-- **Has global CLAUDE.md** → append the preamble as a delimited block between `<!-- AUGUR START -->` and `<!-- AUGUR END -->` markers so it's safely re-runnable. Subsequent /augur runs overwrite between the markers, leaving the rest of CLAUDE.md untouched.
-- **Has memory system** → write a reference memory pointing at the artifact's path so future sessions can find it.
-- **Has neither** → suggest creating `~/.claude/CLAUDE.md` and drop the preamble there as the seed.
-- **Artifact location** → default `~/.claude/augur/personality.md`. Ask only if the user has a non-standard setup.
+**Location.** Default `~/.claude/augur/personality.md`. If Step 1 found an existing personality doc or a non-standard setup, ask where it should live instead of assuming — the user might want it alongside their existing docs.
 
-After writing, confirm in ≤3 lines what landed where. Do not summarize the artifact's content — they can open it.
+**Wiring it to load every session.** A plain text pointer in CLAUDE.md does *not* load the file's content — only an `@`-import does. Place a single import line inside the re-runnable marker block:
+
+```markdown
+<!-- AUGUR START -->
+@~/.claude/augur/personality.md
+<!-- AUGUR END -->
+```
+
+Integrate based on the setup found in Step 1:
+- **Has global CLAUDE.md** → write the marker block with the `@`-import line (path adjusted to wherever the file actually landed). Subsequent /augur runs overwrite between the markers, leaving the rest of CLAUDE.md untouched.
+- **Migration — found an old inline preamble between the markers** → *replace* that inline block with the `@`-import line, and overwrite the old report-format `personality.md` with the lean one. Tell the user the format changed: the rules now live in `personality.md` and CLAUDE.md just imports it. Don't leave both an inline preamble and an imported file — that double-loads the rules.
+- **Has memory system** → write a reference memory pointing at the file's path so future sessions can find it.
+- **Has neither CLAUDE.md** → suggest creating `~/.claude/CLAUDE.md` with the marker block + import as the seed. If they decline, leave `personality.md` on disk and tell them it won't auto-load until something imports it.
+
+After writing, confirm in ≤3 lines what landed where.
 
 ## What this skill will NOT do
 
@@ -271,17 +265,17 @@ After writing, confirm in ≤3 lines what landed where. Do not summarize the art
 - Force a personality.md file format on top of an existing setup.
 - Treat astrology, MBTI-type-only, or fictional-archetype input as load-bearing.
 - Generate a personality from thin air. If there is no input and no interview, the skill stops.
-- Write the artifacts without sign-off.
+- Write `personality.md` without sign-off.
 - Skip Step 0. Pacing is *always* the user's call, never Claude's guess.
-- Paste the full personality artifact into chat. It's a document. Documents live in files.
+- Write a report. `personality.md` carries conclusions — directive rules — not the claimed-vs-observed scaffolding, scores, citations, or caveats. If it grows past ~30 lines, cut it back.
 - Ask gating questions in free-text prose when AskUserQuestion will do. The UI is the mechanic.
 
 ## Sharing and portability notes
 
-This skill is intended to be shareable. The artifacts it produces are designed to be:
+This skill is intended to be shareable. The `personality.md` it produces is designed to be:
 
-- **Readable by strangers** — preamble has no internal jargon; artifact shows its work.
-- **Editable by the user** — the artifact is theirs, they own it, they can rewrite.
-- **Auditable** — any rule in the preamble can be traced back to a source in the artifact.
+- **Cheap to load** — ~25–30 lines, so it can sit in context every session without weight.
+- **Readable by strangers** — directive rules, no internal jargon, no scores to decode.
+- **Editable by the user** — the file is theirs, they own it, they can rewrite.
 
-If you (Claude, running this skill) catch yourself adding flourish, hedging, or padding to the artifacts: stop, cut it, ship the lean version.
+If you (Claude, running this skill) catch yourself adding flourish, hedging, padding, or provenance to the file: stop, cut it, ship the lean version.
