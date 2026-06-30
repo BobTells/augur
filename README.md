@@ -3,12 +3,13 @@
 
 # augur
 
-A Claude Code skill that tunes the LLM to a user's personality. You hand it evidence — a Big Five report, DISC results, a "user manual for me," a bio — or it interviews you as fallback. It reads the input critically, weights it by credibility, and emits two artifacts:
+A Claude Code skill that tunes the LLM to a user's personality. You hand it evidence — a Big Five report, DISC results, a "user manual for me," a bio — or it interviews you as fallback. It reads the input critically, weights it by credibility, and emits one artifact:
 
-1. **Behavior preamble** — terse rules that drop into your existing Claude setup (global `CLAUDE.md`, project memory, wherever your durable instructions live). This is what tunes Claude in future sessions.
-2. **Personality artifact** — a human-readable document that shows the work: what you claimed, what was observed, why the preamble says what it says.
+**`personality.md`** — a lean file (~25–30 lines) built to *load into context every session*. A one-line headline, **how to work with me** (directive rules Claude can act on), and **what to watch for** (the blind spots your personality predicts). It's wired into your setup with an `@`-import in `CLAUDE.md` so it loads on every run.
 
-Both artifacts together are the contract. You see the rules and the evidence. Claude reads the rules and honors them.
+The skeptical reading still happens under the hood — claimed vs observed, credibility tiering, where the two conflict — but it doesn't get written into the file. The file carries the *conclusions*, not the provenance, so it stays cheap to load every turn. Where observed behavior contradicts a self-reported score, the file states the observed rule.
+
+The file is the contract. You read the rules and sign off. Claude reads the rules and honors them.
 
 ## Thesis
 
@@ -28,10 +29,10 @@ Then in any Claude Code session, invoke `/augur`, or paste personality assessmen
 ## What it actually does
 
 - Asks you up front *how* you want this done — one-shot dump, slow walk-through, interview-heavy, whatever.
-- Reads whatever evidence you give it (assessment report, doc, paste). Self-report is treated as suspect; behavioral signal in your existing setup is cross-referenced.
-- Marks every trait as `claimed`, `observed`, or `both` so the seams stay visible.
-- Emits a preamble + an artifact, and asks you to sign off before writing either.
-- Adapts to your existing setup. Thin `CLAUDE.md`? Fine. Big one? Fine. Project memory? Skill folder? It works around what you already have.
+- Reads whatever evidence you give it (assessment report, doc, paste). Self-report is treated as suspect; behavioral signal in your existing setup is cross-referenced, and observed behavior wins when it conflicts with a score.
+- Writes `personality.md` as directive rules, not a report — no percentile tables, no citations, no caveats to scroll past.
+- Shows you the whole file and asks you to sign off before writing it or touching `CLAUDE.md`.
+- Adapts to your existing setup. Thin `CLAUDE.md`? Fine. Big one? Fine. Project memory? Skill folder? It works around what you already have — and if you've run an older version, it migrates the old inline preamble to the new `@`-imported file.
 
 ## Hard rules baked into the skill
 
